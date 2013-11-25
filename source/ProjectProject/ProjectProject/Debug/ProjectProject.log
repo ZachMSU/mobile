@@ -1,0 +1,28 @@
+﻿Build started 11/24/2013 9:17:43 PM.
+     1>Project "C:\temp\project\mobile\source\ProjectProject\ProjectProject\ProjectProject.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc110.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\camera.cpp ..\..\helpers.cpp ..\..\picture.cpp ..\..\proj.cpp
+         proj.cpp
+         picture.cpp
+     1>c:\temp\project\mobile\source\picture.cpp(35): warning C4996: 'strerror': This function or variable may be unsafe. Consider using strerror_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files (x86)\microsoft visual studio 11.0\vc\include\string.h(164) : see declaration of 'strerror'
+         helpers.cpp
+     1>c:\temp\project\mobile\source\helpers.cpp(45): warning C4553: '==' : operator has no effect; did you intend '='?
+         camera.cpp
+         Generating Code...
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 11.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\temp\project\mobile\source\ProjectProject\Debug\ProjectProject.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\temp\project\mobile\source\ProjectProject\Debug\ProjectProject.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\temp\project\mobile\source\ProjectProject\Debug\ProjectProject.lib" /MACHINE:X86 Debug\camera.obj
+         Debug\helpers.obj
+         Debug\picture.obj
+         Debug\proj.obj
+         Debug\image_DXT.obj
+         Debug\image_helper.obj
+         Debug\SOIL.obj
+         Debug\stb_image_aug.obj
+         LINK : C:\temp\project\mobile\source\ProjectProject\Debug\ProjectProject.exe not found or not built by the last incremental link; performing full link
+         ProjectProject.vcxproj -> C:\temp\project\mobile\source\ProjectProject\Debug\ProjectProject.exe
+     1>Done Building Project "C:\temp\project\mobile\source\ProjectProject\ProjectProject\ProjectProject.vcxproj" (Build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:02.89
