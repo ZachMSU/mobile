@@ -34,7 +34,7 @@ public:
 	//picture(string filename);
 	//picture(string filename, GLfloat width, GLfloat height);
 	//picture(string filename, string name, string description); //filename, name, description
-	picture(string filename, GLfloat width, GLfloat height, string name = DEFAULT_NAME, string description = DEFAULT_DESCRIPTION);
+	picture(string filename, string name = DEFAULT_NAME, string description = DEFAULT_DESCRIPTION);
 	void display(GLfloat lx, GLfloat ly, GLfloat lz, GLfloat langle, bool lhighlighted = false){
 		x = lx;
 		y = ly;

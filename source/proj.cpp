@@ -20,6 +20,7 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 
 #include "helpers.h"
 #include "picture.h"
+#include "tinydir.h"
 
 #define editor_title "3D Mobile"
 #define DEFAULT_MANIFEST "C:\\temp\\project\\manifest.txt"
@@ -38,7 +39,7 @@ picture* lookat;
 
 GLfloat random(){
 	GLfloat out = ((GLfloat) rand() / RAND_MAX) * (SPEED_RANGE * 2) - SPEED_RANGE;
-	cout<<"->Random:"<<out<<"\n";
+	//cout<<"->Random:"<<out<<"\n";
 	return out;
 }
 
@@ -91,7 +92,7 @@ int height = 600,
 	width  = 1000,
 	depth = 600;
 
-double distanceMultiplier = 5;
+double distanceMultiplier = 6;
 
 int globalX, globalY;
 //double angle = 0;
@@ -241,6 +242,7 @@ void translate(double x, double y) {
 void rotate(double rads) {
 	myDisplayCallback();
 }
+
 void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 	switch (key) {
 		case 't':
@@ -254,8 +256,7 @@ void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 				  break;
 		case '4': //followPicIndex = 3;
 				  break;
-		case 'r': //followPicIndex = -1;
-				  if (tracking) {
+		case 'r': if (tracking) {
 					  tracking = !tracking;
 					  resetCamera();
 				  }
@@ -353,26 +354,54 @@ void loadManifest(const char* manifestFilename){
 //		picCount ++;
 //	}
 }
-void loadHardTree(){
-	//this is just a hardcoded tree. Trees are hard.
-	root->left = new treeNode(0, -100, 0, 800);
-	root->right = new treeNode(0, -100, 0, 800);
 
-	root->left->left = new treeNode(0, -200, 0, 800);
-	root->left->right = new treeNode(0, -200, 0, 800);
+void searchDirectory(const char *path, treeNode *leaf, float depth) {
+	tinydir_dir dir;
+	tinydir_open(&dir, path);
 
-	root->right->left = new treeNode(0, -200, 0, 800);
-	root->right->right = new treeNode(0, -200, 0, 800);
+	bool hasLeftNode = false;
+	bool hasLeftPic = false;
+	depth -= 100;
+	while (dir.has_next) {
+		tinydir_file file;
+		tinydir_readfile(&dir, &file);
+		if (file.is_dir) {
+			if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) {
+				// Do Nothing otherwise it will loop for a long time
+			} else {
+				if (hasLeftNode)  {//go Right
+					leaf->right = new treeNode(0, depth, 0, 800);
+					searchDirectory(file.path, leaf->right, depth);
+				} else { //go Left
+					leaf->left = new treeNode(0, depth, 0, 800);
+					searchDirectory(file.path, leaf->left, depth);
+					hasLeftNode = true;
+				}
+			}
+		} else {
+			if (hasLeftPic) {
+				leaf->right->pic = new picture(file.path, "something", "something");
+			} else {
+				leaf->left->pic = new picture(file.path, "something", "something");
+				hasLeftPic = true;
+			}
+		}
+		tinydir_next(&dir);
+	}
+	
+	tinydir_close(&dir);
+}
 
-	root->left->left->pic = new picture("C:\\temp\\project\\pics\\1.jpg", 800, 600, "bard", "thing");
-	root->left->right->pic = new picture("C:\\temp\\project\\pics\\2.jpg", 800, 600, "batoro", "kids");
+void constructMobileTree() {
+	root = new treeNode(0, 0, 0, 2000);  // Main root
+	root->left = new treeNode(0, -100, 0, 800); // Left child
+	root->right = new treeNode(0, -100, 0, 800); // Right child
 
-
-	root->right->left->pic = new picture("C:\\temp\\project\\pics\\3.jpg", 800, 600, "bard", "thing is beans");
-	root->right->right->pic = new picture("C:\\temp\\project\\pics\\4.jpg", 800, 600, "sette", "haters");
-
+	searchDirectory("../../../mobiletree/1", root->left, -100); //Check left
+	searchDirectory("../../../mobiletree/2", root->right, -100); // Check right
 	lookat = root->left->left->pic;
 }
+
 void main(int argc, char ** argv){
 	//initialize glut and openGL
 	glutInit(& argc, argv);
@@ -382,18 +411,13 @@ void main(int argc, char ** argv){
 	glutCreateWindow(editor_title);	// create a titled window
 	myInit();									// setting up
 
-	//if (argc < 2) {
-	//	//no command line parameters given
-	//	loadManifest(DEFAULT_MANIFEST);
-	//} else {
-	//	loadManifest(argv[1]);
-	//}
 	//initialize project stuff
 	srand(time(NULL));
-	root = new treeNode(0, 0, 0, 2000);
 	//click = new mouseClick();
 	click.clicked = false;
-	loadHardTree();
+
+	constructMobileTree();
+
 	//pause();
 
 	glutKeyboardFunc(keyboardCallback);
