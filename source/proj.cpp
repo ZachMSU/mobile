@@ -29,14 +29,11 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 #define WOBBLE 2
 using namespace std;
 
-//picture* pics[300];
-//int picCount = 0;
-//double myangle = 0;
-
 static bool spinning = true;
 static const int FPS = 30;
-static GLfloat currentAngleOfRotation[4] = { 0, 30, 90, 180 };
 picture* lookat;
+
+int pointingToAbyss;
 
 GLfloat random(){
 	GLfloat out = ((GLfloat) rand() / RAND_MAX) * (SPEED_RANGE * 2) - SPEED_RANGE;
@@ -96,9 +93,6 @@ int height = 600,
 double distanceMultiplier = 6;
 
 int globalX, globalY;
-//double angle = 0;
-
-//int followPicIndex = -1;
 
 bool hideHelp = true,
 	 hideCoord = false,
@@ -151,7 +145,8 @@ void drawTree(treeNode* tree) {
 		//leaf(with picture)
 		float oldClickDepth;
 		//if (click.clicked) {
-		if (true){ //debug, change this back
+		//if (true){ //debug, change this back
+		if (!tracking) {
 			glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &oldClickDepth);
 		}
 		if (lookat == tree->pic) {
@@ -161,16 +156,23 @@ void drawTree(treeNode* tree) {
 		}
 
 		//if (click.clicked) {
-		if (true) { //debug, change this back
+		//if (true) { //debug, change this back
+		if (!tracking) { // Here be what you really want click.clicked doesnt seem to work 
+						//  correctly and since tracking is the thing here voila
 			float newClickDepth;
 			glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &newClickDepth);
-			if (newClickDepth != oldClickDepth) {
+			if (newClickDepth == 1.0) {
+				if (pointingToAbyss == 10) lookat = nullptr;
+				else if (pointingToAbyss < 10) pointingToAbyss++;
+			} else if (newClickDepth != oldClickDepth) {
 				click.lastPic = tree->pic;
 				lookat = tree->pic;
+				pointingToAbyss = 0;
 			}
 		}
 
 	} else {
+		glLineWidth(2);
 		GLfloat x1 = tree->xpos + (cos(toRadian(tree->angle)) * tree->radius);
 		GLfloat z1 = tree->zpos + (sin(toRadian(tree->angle)) * tree->radius);
 		GLfloat x2 = tree->xpos + (cos(toRadian(tree->angle + 180)) * tree->radius);
@@ -225,7 +227,7 @@ void redraw(){
 	if (!hideCoord) coordinates(1000);
 
 	drawTree(root);
-	if (click.clicked) {
+	if (click.clicked && lookat != NULL) {
 		tracking = true;
 		click.clicked = false;
 	}
@@ -249,18 +251,11 @@ void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 		case 't':
 			tracking = !tracking;
 			break;
-		case '1': //followPicIndex = 0;
-				  break;
-		case '2': //followPicIndex = 1;
-				  break;
-		case '3': //followPicIndex = 2;
-				  break;
-		case '4': //followPicIndex = 3;
-				  break;
 		case 'r': if (tracking) {
 					  tracking = !tracking;
 					  resetCamera();
 				  }
+				  lookat = nullptr;
 				  break;
 		case 'c': hideCoord = !hideCoord;
 				  break;
@@ -307,7 +302,6 @@ void timer(int v) {
   glutTimerFunc(1000/FPS, timer, v);
 }
 void passiveMove(int cursorX, int cursorY) {
-	// No use yet
 #ifdef DEBUG
 	//cout<<"->passiveMove X:"<<cursorX<<" Y:"<<cursorY<<"\n";
 #endif
@@ -327,16 +321,20 @@ char* parseTextFile(const char *path) {
   
 	ifstream file;
 	file.open (path);
-
-	while (!file.eof())
-	{
-		getline (file, temp);
-		text.append (temp); 
+	if (file.is_open()) {
+		while (!file.eof()) {
+			getline (file, temp);
+			text.append (temp); 
+		}
+		file.close();
+		char * ret = new char[strlen(temp.c_str())+1]();
+		strcpy(ret, temp.c_str());
+		return ret;
+	} else {
+		cout << " ( ! ) Missing file: " << path << "\n\n";
 	}
-	file.close();
-	char * ret = new char[strlen(temp.c_str())+1]();
-	strcpy(ret, temp.c_str());
-	return ret;
+	
+	return "???";
 }
 
 void printDirectory(const char *path) {
@@ -347,9 +345,7 @@ void printDirectory(const char *path) {
 		tinydir_file file;
 		tinydir_readfile(&dir, &file);
 		if (file.is_dir) {
-			if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) {
-				// Do Nothing otherwise it will loop for a long time
-			} else {
+			if (strcmp(file.name, ".") != 0 && strcmp(file.name, "..") != 0) {
 				cout << file.name << "/\n";
 				printDirectory(file.path);
 			}
@@ -373,9 +369,7 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 		tinydir_file file;
 		tinydir_readfile(&dir, &file);
 		if (file.is_dir) {
-			if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) {
-				// Do Nothing otherwise it will loop for a long time
-			} else {
+			if (strcmp(file.name, ".") != 0 && strcmp(file.name, "..") != 0) {
 				if (hasLeftNode)  {//go Right
 					leaf->right = new treeNode(0, depth, 0, 800);
 					searchDirectory(file.path, leaf->right, depth); // Check right
@@ -388,15 +382,16 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 		} else {
 			char fileName[256], extension[20];
 			char textPath[4096];
-			char* picText;
+			char* fileDescription;
 			sscanf(file.name, "%[^.].%s", fileName, extension);
 			if (strcmp(extension, "txt") != 0) {
 				sprintf(textPath, "%s/%s%s", path, fileName, ".txt");
-				picText = (char*)parseTextFile(textPath);
+				printf("->Preparing files:\n  %s\n  %s\n\n", file.path, textPath);
+				fileDescription = (char*)parseTextFile(textPath);
 				if (hasLeftPic) {
-					leaf->right->pic = new picture(file.path, file.name, picText);
+					leaf->right->pic = new picture(file.path, file.name, fileDescription);
 				} else {
-					leaf->left->pic = new picture(file.path, file.name, picText);
+					leaf->left->pic = new picture(file.path, file.name, fileDescription);
 					hasLeftPic = true;
 				}
 			}
@@ -415,7 +410,6 @@ void constructMobileTree() {
 
 	root->right = new treeNode(0, -100, 0, 800); // Right child
 	searchDirectory("../../../mobiletree/2", root->right, -100); // Check right
-	lookat = root->left->left->pic;
 }
 
 void main(int argc, char ** argv){

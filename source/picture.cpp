@@ -16,11 +16,10 @@
 picture::picture(string filename, string inName, string inDescription){
 	errno = 0;
 #ifdef DEBUG	
-	cout << "->Constructing texture object for " << filename << ": Loading...";
+	cout << "->Constructing texture object for " << filename << ":\nLoading...";
 #endif
 	name = string(inName);
 	description = string(inDescription);
-	
 	loaded = false;
 	width = //inWidth;
 	height = //inHeight;
@@ -37,7 +36,7 @@ picture::picture(string filename, string inName, string inDescription){
 		glDisable(GL_TEXTURE_2D);
 	} else {
 #ifdef DEBUG
-		cout << "Done! Storing[" << texture << "]...";
+		cout << "Done!\nStoring[" << texture << "]...";
 #endif
 		
 
@@ -53,7 +52,6 @@ picture::picture(string filename, string inName, string inDescription){
 		height = h;
 #ifdef DEBUG
 		cout << "Success!\n";
-		cout << "Texture Width: " << width << ", Texture Height: " << height << "\n";
 #endif
 		loaded = true;
 	}
