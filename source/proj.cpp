@@ -18,6 +18,7 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 4.		Press Ctrl+F5					to EXECUTE
 ===================================================================================*/
 
+#include <sstream>
 #include "helpers.h"
 #include "picture.h"
 #include "tinydir.h"
@@ -319,40 +320,45 @@ void passiveMove(int cursorX, int cursorY) {
 void mouseMovement(int cursorX, int cursorY) {
 	// No use yet
 }
-void loadManifest(const char* manifestFilename){
-	/* Loads the configuration data from the manifest file. 
-	 * See example manifest.txt for more deets
-	 * manifestFilename : filename of the config file
-	 * NOTES: This whole thing could be better.
-	 */
 
-	//known bug: will crash if comment is at the end
-//	ifstream file;
-//	file.open(manifestFilename);
-//	string filename;
-//	GLfloat width;
-//	GLfloat height;
-//	string name;
-//	string description;
-//	string token;
-//	while (!file.eof()) {
-//		file>>token;
-//		if (token == "/*") {
-//			//itereate over comments
-//			while (true){
-//				file>>token;
-//				if (token == "*/") break;
-//			}
-//			file>>token;
-//		}
-//		filename = token;
-//		file>>width>>height>>name>>description;
-//#ifdef DEBUG
-//		cout<<"->IDX:"<<picCount<<"FN:"<<filename<<" W:"<<width<<" H:"<<height<<" NAME:"<<name<<" DESCRIPTION:"<<description<<"\n"; //debug
-//#endif
-//		pics[picCount] = new picture(filename, width, height, name, description);
-//		picCount ++;
-//	}
+char* parseTextFile(const char *path) {
+	string text;
+	string temp;
+  
+	ifstream file;
+	file.open (path);
+
+	while (!file.eof())
+	{
+		getline (file, temp);
+		text.append (temp); 
+	}
+	file.close();
+	char * ret = new char[strlen(temp.c_str())+1]();
+	strcpy(ret, temp.c_str());
+	return ret;
+}
+
+void printDirectory(const char *path) {
+	tinydir_dir dir;
+	tinydir_open(&dir, path);
+
+	while (dir.has_next) {
+		tinydir_file file;
+		tinydir_readfile(&dir, &file);
+		if (file.is_dir) {
+			if (strcmp(file.name, ".") == 0 || strcmp(file.name, "..") == 0) {
+				// Do Nothing otherwise it will loop for a long time
+			} else {
+				cout << file.name << "/\n";
+				printDirectory(file.path);
+			}
+		} else {
+			cout << file.name << "\n";
+		}
+		tinydir_next(&dir);
+	}
+	tinydir_close(&dir);
 }
 
 void searchDirectory(const char *path, treeNode *leaf, float depth) {
@@ -362,6 +368,7 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 	bool hasLeftNode = false;
 	bool hasLeftPic = false;
 	depth -= 100;
+
 	while (dir.has_next) {
 		tinydir_file file;
 		tinydir_readfile(&dir, &file);
@@ -371,33 +378,42 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 			} else {
 				if (hasLeftNode)  {//go Right
 					leaf->right = new treeNode(0, depth, 0, 800);
-					searchDirectory(file.path, leaf->right, depth);
+					searchDirectory(file.path, leaf->right, depth); // Check right
 				} else { //go Left
 					leaf->left = new treeNode(0, depth, 0, 800);
-					searchDirectory(file.path, leaf->left, depth);
+					searchDirectory(file.path, leaf->left, depth); // Check left
 					hasLeftNode = true;
 				}
 			}
 		} else {
-			if (hasLeftPic) {
-				leaf->right->pic = new picture(file.path, "something", "something");
-			} else {
-				leaf->left->pic = new picture(file.path, "something", "something");
-				hasLeftPic = true;
+			char fileName[256], extension[20];
+			char textPath[4096];
+			char* picText;
+			sscanf(file.name, "%[^.].%s", fileName, extension);
+			if (strcmp(extension, "txt") != 0) {
+				sprintf(textPath, "%s/%s%s", path, fileName, ".txt");
+				picText = (char*)parseTextFile(textPath);
+				if (hasLeftPic) {
+					leaf->right->pic = new picture(file.path, file.name, picText);
+				} else {
+					leaf->left->pic = new picture(file.path, file.name, picText);
+					hasLeftPic = true;
+				}
 			}
+			printf("\n");
 		}
 		tinydir_next(&dir);
 	}
-	
 	tinydir_close(&dir);
 }
 
 void constructMobileTree() {
 	root = new treeNode(0, 0, 0, 2000);  // Main root
-	root->left = new treeNode(0, -100, 0, 800); // Left child
-	root->right = new treeNode(0, -100, 0, 800); // Right child
 
+	root->left = new treeNode(0, -100, 0, 800); // Left child
 	searchDirectory("../../../mobiletree/1", root->left, -100); //Check left
+
+	root->right = new treeNode(0, -100, 0, 800); // Right child
 	searchDirectory("../../../mobiletree/2", root->right, -100); // Check right
 	lookat = root->left->left->pic;
 }
@@ -416,6 +432,7 @@ void main(int argc, char ** argv){
 	//click = new mouseClick();
 	click.clicked = false;
 
+	//printDirectory("../../../mobiletree");
 	constructMobileTree();
 
 	//pause();
