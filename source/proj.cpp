@@ -20,6 +20,7 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 
 #include "helpers.h"
 #include "picture.h"
+#include "camera.h"
 
 #define editor_title "3D Mobile"
 #define DEFAULT_MANIFEST "C:\\temp\\project\\manifest.txt"
@@ -27,12 +28,9 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 #define WOBBLE 2
 using namespace std;
 
-//picture* pics[300];
-//int picCount = 0;
-//double myangle = 0;
-
+static GLbitfield bitmask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
 static bool spinning = true;
-static const int FPS = 30;
+static int FPS = 60;
 static GLfloat currentAngleOfRotation[4] = { 0, 30, 90, 180 };
 picture* lookat;
 
@@ -56,7 +54,6 @@ struct mouseClick{
 		lastPic = NULL;
 	}
 };
-
 mouseClick click;
 
 struct treeNode{
@@ -87,61 +84,55 @@ struct treeNode{
 
 treeNode* root;
 
+//camera stuff
 int height = 600,
 	width  = 1000,
 	depth = 600;
-
 double distanceMultiplier = 5;
-
-int globalX, globalY;
-//double angle = 0;
-
-//int followPicIndex = -1;
+camera cam(70.0, 1000, 600, 1, depth*distanceMultiplier*1000); //initalize the camera object
+cameraPos initialPos = {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0};
 
 bool hideHelp = true,
-	 hideCoord = false,
+	 showCoords = true,
 	 tracking = false;
 
-double camera[9] =  {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0, 0, 1, 0};
-
-//cameraPos initalPosition = {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0};
-
-
 void reshape(int w, int h){
-    width = w;
-    height = h;
-    glViewport(0, 0, w, h);
-	//glMatrixMode(GL_PROJECTION);
-	//glLoadIdentity();
-	//gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
+    //width = w;
+    //height = h;
+    //glViewport(0, 0, w, h);
+	cam.changePerspective(70.0, w, h, 1, depth*distanceMultiplier*1000);
 }
 void resetCamera() {
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	camera[0] = camera[3] = camera[5] = 0;
-	camera[4] = -1500;
-	camera[1] = -500;
-	camera[2] = depth*distanceMultiplier*1.5;
-	//gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
-#ifdef DEBUG
-	cout<<"->Aspect:("<<width<<","<<height<<")\n";
-#endif
-	gluPerspective(70.0, 1, width/height, depth*distanceMultiplier*1000);
-	gluLookAt(camera[0], camera[1], camera[2], 
-		      camera[3], camera[4], camera[5], 
-			  camera[6], camera[7], camera[8]);
+	cam.set(initialPos, true);
+//	glMatrixMode(GL_PROJECTION);
+//	glLoadIdentity();
+//	camera[0] = camera[3] = camera[5] = 0;
+//	camera[4] = -1500;
+//	camera[1] = -500;
+//	camera[2] = depth*distanceMultiplier*1.5;
+//#ifdef DEBUG
+//	cout<<"->Aspect:("<<width<<","<<height<<")\n";
+//#endif
+//	gluPerspective(70.0, 1, width/height, depth*distanceMultiplier*1000);
+//	gluLookAt(camera[0], camera[1], camera[2], 
+//		      camera[3], camera[4], camera[5], 
+//			  camera[6], camera[7], camera[8]);
 }
 void track(){
-	glMatrixMode(GL_PROJECTION);
+	//glMatrixMode(GL_PROJECTION);
 
-	glLoadIdentity();
-	gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
+	//glLoadIdentity();
+	//gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
 
-	gluLookAt(lookat->x - (1200 * sin(toRadian(lookat->angle + 180 + WOBBLE))),
-		lookat->y - lookat->height,
-		lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
-			  lookat->x, lookat->y - lookat->height, lookat->z,
-			  camera[6], camera[7], camera[8]);
+	//gluLookAt(lookat->x - (1200 * sin(toRadian(lookat->angle + 180 + WOBBLE))),
+	//	lookat->y - lookat->height,
+	//	lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
+	//		  lookat->x, lookat->y - lookat->height, lookat->z,
+	//		  camera[6], camera[7], camera[8]);
+	cam.set(lookat->x - (1200 * sin(toRadian(lookat->angle + 180 + WOBBLE))),
+			lookat->y - lookat->height,
+			lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
+			lookat->x, lookat->y - lookat->height, lookat->z, false);
 }
 void drawTree(treeNode* tree) {	
 	//This is all recursive up in here!
@@ -152,11 +143,11 @@ void drawTree(treeNode* tree) {
 		if (true){ //debug, change this back
 			glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &oldClickDepth);
 		}
-		if (lookat == tree->pic) {
-			tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle, true);
-		} else {
-			tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle);
-		}
+		//if (lookat == tree->pic) {
+			tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle, tree->pic == click.lastPic);
+		//} else {
+		//	tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle);
+		//}
 
 		//if (click.clicked) {
 		if (true) { //debug, change this back
@@ -164,7 +155,7 @@ void drawTree(treeNode* tree) {
 			glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &newClickDepth);
 			if (newClickDepth != oldClickDepth) {
 				click.lastPic = tree->pic;
-				lookat = tree->pic;
+				//lookat = tree->pic;
 			}
 		}
 
@@ -176,6 +167,7 @@ void drawTree(treeNode* tree) {
 		glColor3f(0, 1, 1);
 		
 		//draw the sticks
+		glLineWidth(3);
 		glBegin(GL_LINES);		
 		glVertex3f(x1, tree->left->ypos, z1);
 		glVertex3f(x1, tree->ypos, z1);
@@ -211,23 +203,21 @@ void drawTree(treeNode* tree) {
 	}
 }
 void redraw(){
-	glEnable(GL_DEPTH_TEST); 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glClear(GL_DEPTH_BUFFER_BIT);//this one is for fun
+	glClear(bitmask);
 
 	if (tracking) track();
 	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	
-	if (!hideCoord) coordinates(1000);
+	if (showCoords) coordinates(1000);
 
 	drawTree(root);
+	cam.touch();
 	if (click.clicked) {
 		tracking = true;
 		click.clicked = false;
 	}
-
 	glFlush();
 	glutSwapBuffers();
 }
@@ -235,48 +225,66 @@ void myDisplayCallback(){
 	//don't put stuff here, have everything redraw off the timer tick
 	// prevents window refreshes from making the thing spin out of control
 }
-void translate(double x, double y) {
-	myDisplayCallback();
-}
-void rotate(double rads) {
-	myDisplayCallback();
-}
 void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 	switch (key) {
-		case 't':
-			tracking = !tracking;
-			break;
-		case '1': //followPicIndex = 0;
-				  break;
-		case '2': //followPicIndex = 1;
-				  break;
-		case '3': //followPicIndex = 2;
-				  break;
-		case '4': //followPicIndex = 3;
-				  break;
-		case 'r': //followPicIndex = -1;
-				  if (tracking) {
-					  tracking = !tracking;
-					  resetCamera();
-				  }
-				  break;
-		case 'c': hideCoord = !hideCoord;
-				  break;
-		case 'q': exit(EXIT_SUCCESS);
-				  break;
-		default: break;
+	case '+':
+		FPS += 10;
+	case '-':
+		FPS -= 5;
+		if (FPS <= 0) FPS = 5;
+		cout<<"Framerate(FPS):"<<FPS<<"\n";
+		break;
+	case 'b'://this one is for fun
+		bitmask ^= GL_COLOR_BUFFER_BIT;
+		if (bitmask & GL_COLOR_BUFFER_BIT) {
+			cout<<"Clearing buffer(normal)\n";
+		} else {
+			cout<<"No longer clearing buffer\n";
+		}
+		break;
+	case 'd'://also for fun
+		if (glIsEnabled(GL_DEPTH_TEST)) {
+			glDisable(GL_DEPTH_TEST);
+			cout<<"Disabled Depth Test\n";
+		} else {
+			glEnable(GL_DEPTH_TEST);
+			cout<<"Enabled Depth Test\n";
+		}
+		break;
+	case ' ':
+		redraw();
+		break;
+	case 's':
+		if (spinning) {
+			cout << "Stopping Animation(use space to advance frame)\n";
+			spinning = false;
+		} else {
+			cout << "Starting Animation\n";
+			spinning = true;
+		}
+		break;
+	case 'c': 
+		if (showCoords) {
+			cout<<"Hiding Coordinate Axis\n";
+			showCoords = false;
+		} else {
+			cout<<"Showing Coordinat Axis\n";
+			showCoords = true;
+		}
+		break;
+	case 'q': 
+	case 27://escape
+		exit(EXIT_SUCCESS);
+		cout<<"Bye!\n";
+		break;
+	default: break;
 	}
 }
-//void mouseCallback(int buttonName, int state, int cursorX, int cursorY) {
-//	if (buttonName == GLUT_LEFT_BUTTON && state == GLUT_UP && followPicIndex != -1) {
-//		tracking = !tracking;
-//		if (!tracking) resetCamera();
-//	}
-//}
 void mouseCallback(int buttonName, int state, int cursorX, int cursorY) {
 #ifdef DEBUG
 	cout<<"->MouseClick X:"<<cursorX<<" Y:"<<cursorY<<"\n";
 #endif
+	cam.animate(120);
 	if (buttonName == GLUT_LEFT_BUTTON && state == GLUT_UP) {
 		if (tracking) {
 			resetCamera();
@@ -285,34 +293,23 @@ void mouseCallback(int buttonName, int state, int cursorX, int cursorY) {
 			click.clicked = true;
 			click.x = cursorX;
 			click.y = width - cursorY;
+			lookat = click.lastPic;
 		}
 	}
 }
 void myInit(){
-	glViewport(0, 0, width, height);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
-	gluLookAt(camera[0], camera[1], camera[2], 
-		      camera[3], camera[4], camera[5], 
-			  camera[6], camera[7], camera[8]);
+	glEnable(GL_DEPTH_TEST); 
+	cam.set(initialPos);
+	cam.touch();
 }
 void timer(int v) {
-
-  //glutPostRedisplay();
-
-	redraw();
-  glutTimerFunc(1000/FPS, timer, v);
+	if (spinning) redraw();
+	glutTimerFunc(1000/FPS, timer, v);
 }
 void passiveMove(int cursorX, int cursorY) {
-	// No use yet
-#ifdef DEBUG
-	//cout<<"->passiveMove X:"<<cursorX<<" Y:"<<cursorY<<"\n";
-#endif
-			//click.clicked = true;
 	if (!tracking) {
 		click.x = cursorX;
-		click.y = height - cursorY;
+		click.y = (int) cam.height - cursorY;
 	}
 }
 void mouseMovement(int cursorX, int cursorY) {
@@ -354,18 +351,24 @@ void loadManifest(const char* manifestFilename){
 //	}
 }
 void loadHardTree(){
-	//this is just a hardcoded tree. Trees are hard.
-	root->left = new treeNode(0, -100, 0, 800);
+	//this is just a hardcoded tree. For debug purposes
+	//Trees are hard.
+	root->left = new treeNode(0, -100, 0, 1200);
 	root->right = new treeNode(0, -100, 0, 800);
 
-	root->left->left = new treeNode(0, -200, 0, 800);
+	root->left->left = new treeNode(0, -500, 0, 600);
 	root->left->right = new treeNode(0, -200, 0, 800);
 
 	root->right->left = new treeNode(0, -200, 0, 800);
 	root->right->right = new treeNode(0, -200, 0, 800);
 
-	root->left->left->pic = new picture("C:\\temp\\project\\pics\\1.jpg", 800, 600, "bard", "thing");
-	root->left->right->pic = new picture("C:\\temp\\project\\pics\\2.jpg", 800, 600, "batoro", "kids");
+	root->left->left->left = new treeNode(0, -900, 0, 600);
+	root->left->left->right = new treeNode(0, -900, 0, 600);
+
+	root->left->left->left->pic = new picture("C:\\temp\\project\\pics\\1.jpg", 600, 500, "bard", "thing");
+	root->left->left->right->pic = new picture("C:\\temp\\project\\pics\\5.jpg", 600, 500, "bard", "thing");
+	
+	root->left->right->pic = new picture("C:\\temp\\project\\pics\\6.jpg", 800, 1300, "batoro", "kids");
 
 
 	root->right->left->pic = new picture("C:\\temp\\project\\pics\\3.jpg", 800, 600, "bard", "thing is beans");
@@ -390,11 +393,10 @@ void main(int argc, char ** argv){
 	//}
 	//initialize project stuff
 	srand(time(NULL));
-	root = new treeNode(0, 0, 0, 2000);
-	//click = new mouseClick();
+	root = new treeNode(0, 0, 0, 3000);
+
 	click.clicked = false;
 	loadHardTree();
-	//pause();
 
 	glutKeyboardFunc(keyboardCallback);
 	glutDisplayFunc(myDisplayCallback);		// register a callback

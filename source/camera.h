@@ -14,20 +14,30 @@ struct cameraPos{
 class camera{
 	//this is a singleton
 private:
-	cameraPos currentPos;
-	cameraPos toPos;
-	cameraPos fromPos;
-	int framesLeft;
-public:
+	bool changed;
+
+	int framesLeft, framesAnimate;
+	GLdouble upx, upy, upz;
+
+	void copyStruct(cameraPos* from, cameraPos* to);
 	
-	void animate(int frame);
-	camera();
-	void set(GLfloat x, GLfloat y, GLfloat z, GLfloat lookatX, GLfloat lookatY, GLfloat lookatZ);
-	void set(cameraPos position);
-	void setPos(GLfloat x, GLfloat y, GLfloat z);
-	void setPos(cameraPos position);
+public:
+	cameraPos currentPos, toPos, fromPos;
+	GLdouble fovy, width, height, zNear, zFar;	
+	void animate(int frames);
+	camera(GLdouble ifovy, GLdouble iwidth, GLdouble iheight, GLdouble izNear, GLdouble izfar);
+	void changePerspective(GLdouble ifovy, GLdouble iwidth, GLdouble iheight, GLdouble izNear, GLdouble izFar, bool t = true);
+	//set() sets the camera and lookat
+	void set(GLfloat x, GLfloat y, GLfloat z, GLfloat lookatX, GLfloat lookatY, GLfloat lookatZ, bool t = false);
+	void set(cameraPos position, bool t = false);
+	//setPos() sets the location of the camera
+	void setPos(GLfloat x, GLfloat y, GLfloat z, bool t = false);
+	void setPos(cameraPos position, bool t = false);
+	//setLookat() sets the lookat of the camera
 	void setLookat(GLfloat lookatX, GLfloat lookatY, GLfloat lookatZ);
 	void setLookat(cameraPos position);
+	void touch();
+
 	//possibly add FPS controls
 };
 

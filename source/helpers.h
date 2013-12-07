@@ -20,8 +20,6 @@ using namespace std;
 #include "soil\SOIL.h"
 #include <time.h>
 
-//GLfloat random();
-
 void pause();
 
 double toDegree(double);

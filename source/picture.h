@@ -15,8 +15,6 @@ class picture{
 private:
 	string name;
 	string description;
-	//char name[100];
-	//char description[1000];
 	GLuint loadTexture(string);
 	float texWidth;
 	float texHeight;

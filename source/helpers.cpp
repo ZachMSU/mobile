@@ -1,18 +1,10 @@
 //see helpers.h for comments
 #include "helpers.h"
 
-//GLfloat random(){
-//	GLfloat out = (rand() / RAND_MAX);
-//	return out;
-//}
-
-
-
 void pause(){
 	int in;
 	cin>>in;
 }
-
 struct color{
 	GLfloat red;
 	GLfloat green;
@@ -28,21 +20,18 @@ struct color{
 		blue = b;
 	}
 };
-
 double toRadian(double in){
 	return in * M_PI / 180;
 }
-
 double toDegree(double in){
 	return in * 180 / M_PI;
 }
-
 void renderBitmapString(double x, double y, void *font, string str) {
 	int newlines = 1;
 	glRasterPos2d(x,y);
 	for (string::iterator c = (&str)->begin(); c != (&str)->end(); ++c) {
 		char chr = *c;
-		if (chr == '_') chr == ' ';
+		if (chr == '_') chr = ' ';
 		if (chr == '\n' || chr == '|') { 
 			glRasterPos2d(x,y + (newlines * 15));
 			newlines ++;
@@ -51,7 +40,6 @@ void renderBitmapString(double x, double y, void *font, string str) {
 		}
 	}
 }
-
 void coordinates(GLfloat size) {
 	glLineWidth(1);
 	glBegin(GL_LINES);
