@@ -52,6 +52,10 @@ picture::picture(string filename, string inName, string inDescription){
 		height = h;
 #ifdef DEBUG
 		cout << "Success!\n";
+		cout << "Picture Information: \n";
+		cout << " - name: " << name << "\n";
+		cout << " - width: " << width << ", height: " << height << "\n";
+		cout << " - description: " << description << "\n\n";
 #endif
 		loaded = true;
 	}

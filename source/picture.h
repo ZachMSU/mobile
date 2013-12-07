@@ -13,8 +13,6 @@ class picture{
 	 * and rotated at the specifyed angle(about it's own center)
 	 */
 private:
-	string name;
-	string description;
 	//char name[100];
 	//char description[1000];
 	GLuint loadTexture(string);
@@ -23,6 +21,8 @@ private:
 	GLuint texture;
 	bool loaded;
 public:
+	string name;
+	string description;
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;

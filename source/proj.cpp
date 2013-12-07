@@ -27,13 +27,14 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 #define DEFAULT_MANIFEST "C:\\temp\\project\\manifest.txt"
 #define SPEED_RANGE 0.5
 #define WOBBLE 2
+#define DROP_DISTANCE -400  // For the mobile drop distance for each hanging/raised(if > 0) piece
+#define NODE_FOLDER_1 "../../../mobiletree/1"
+#define NODE_FOLDER_2 "../../../mobiletree/2"
 using namespace std;
 
 static bool spinning = true;
 static const int FPS = 30;
 picture* lookat;
-
-int pointingToAbyss;
 
 GLfloat random(){
 	GLfloat out = ((GLfloat) rand() / RAND_MAX) * (SPEED_RANGE * 2) - SPEED_RANGE;
@@ -99,9 +100,9 @@ bool hideHelp = true,
 	 tracking = false;
 
 double camera[9] =  {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0, 0, 1, 0};
-
 //cameraPos initalPosition = {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0};
 
+int pointingToAbyss;
 
 void reshape(int w, int h){
     width = w;
@@ -122,10 +123,33 @@ void resetCamera() {
 #ifdef DEBUG
 	cout<<"->Aspect:("<<width<<","<<height<<")\n";
 #endif
-	gluPerspective(70.0, 1, width/height, depth*distanceMultiplier*1000);
+	gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
 	gluLookAt(camera[0], camera[1], camera[2], 
 		      camera[3], camera[4], camera[5], 
 			  camera[6], camera[7], camera[8]);
+}
+void displayDescription() {
+	glEnable(GL_BLEND);
+	glDisable(GL_DEPTH_TEST);
+	
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glColor4f(0, 0, 0, 0.6);
+	glPushMatrix();
+	glTranslatef(lookat->x, lookat->y - height, lookat->z);
+	glRotatef(lookat->angle, 0.0, 1.0, 0.0);
+	glBegin(GL_POLYGON);
+		glVertex3f(width, height - lookat->height * 1.5, 0);	
+		glVertex3f(-width, height - lookat->height * 1.5, 0);
+		glVertex3f(-width, -height*2, 0);
+		glVertex3f(width, -height*2, 0);
+	glEnd();
+	glPopMatrix();
+	glColor3f(1, 1, 1);
+	renderBitmapString(lookat->x, lookat->y - lookat->height * 2, lookat->z, GLUT_BITMAP_TIMES_ROMAN_24, lookat->description);
+	
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
 }
 void track(){
 	glMatrixMode(GL_PROJECTION);
@@ -134,8 +158,8 @@ void track(){
 	gluPerspective(70.0, width/height, 1, depth*distanceMultiplier*1000);
 
 	gluLookAt(lookat->x - (1200 * sin(toRadian(lookat->angle + 180 + WOBBLE))),
-		lookat->y - lookat->height,
-		lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
+			  lookat->y - lookat->height,
+			  lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
 			  lookat->x, lookat->y - lookat->height, lookat->z,
 			  camera[6], camera[7], camera[8]);
 }
@@ -231,7 +255,7 @@ void redraw(){
 		tracking = true;
 		click.clicked = false;
 	}
-
+	if (tracking) displayDescription();
 	glFlush();
 	glutSwapBuffers();
 }
@@ -248,9 +272,9 @@ void rotate(double rads) {
 
 void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 	switch (key) {
-		case 't':
+		/*case 't':
 			tracking = !tracking;
-			break;
+			break;*/
 		case 'r': if (tracking) {
 					  tracking = !tracking;
 					  resetCamera();
@@ -324,14 +348,14 @@ char* parseTextFile(const char *path) {
 	if (file.is_open()) {
 		while (!file.eof()) {
 			getline (file, temp);
-			text.append (temp); 
+			text.append (temp);
 		}
 		file.close();
-		char * ret = new char[strlen(temp.c_str())+1]();
-		strcpy(ret, temp.c_str());
+		char * ret = new char[strlen(text.c_str())+1]();
+		strcpy(ret, text.c_str());
 		return ret;
 	} else {
-		cout << " ( ! ) Missing file: " << path << "\n\n";
+		cout << " ( ! ) Missing file: " << path << " ( ! )\n\n";
 	}
 	
 	return "???";
@@ -363,7 +387,7 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 
 	bool hasLeftNode = false;
 	bool hasLeftPic = false;
-	depth -= 100;
+	depth += DROP_DISTANCE;
 
 	while (dir.has_next) {
 		tinydir_file file;
@@ -382,16 +406,16 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 		} else {
 			char fileName[256], extension[20];
 			char textPath[4096];
-			char* fileDescription;
+			char* description;
 			sscanf(file.name, "%[^.].%s", fileName, extension);
 			if (strcmp(extension, "txt") != 0) {
 				sprintf(textPath, "%s/%s%s", path, fileName, ".txt");
 				printf("->Preparing files:\n  %s\n  %s\n\n", file.path, textPath);
-				fileDescription = (char*)parseTextFile(textPath);
+				description = (char*)parseTextFile(textPath);
 				if (hasLeftPic) {
-					leaf->right->pic = new picture(file.path, file.name, fileDescription);
+					leaf->right->pic = new picture(file.path, file.name, description);
 				} else {
-					leaf->left->pic = new picture(file.path, file.name, fileDescription);
+					leaf->left->pic = new picture(file.path, file.name, description);
 					hasLeftPic = true;
 				}
 			}
@@ -406,16 +430,16 @@ void constructMobileTree() {
 	root = new treeNode(0, 0, 0, 2000);  // Main root
 
 	root->left = new treeNode(0, -100, 0, 800); // Left child
-	searchDirectory("../../../mobiletree/1", root->left, -100); //Check left
+	searchDirectory(NODE_FOLDER_1, root->left, DROP_DISTANCE); //Check left
 
 	root->right = new treeNode(0, -100, 0, 800); // Right child
-	searchDirectory("../../../mobiletree/2", root->right, -100); // Check right
+	searchDirectory(NODE_FOLDER_2, root->right, DROP_DISTANCE); // Check right
 }
 
 void main(int argc, char ** argv){
 	//initialize glut and openGL
 	glutInit(& argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowSize(width, height);
 	glutInitWindowPosition(600, 0);			// specify a window position
 	glutCreateWindow(editor_title);	// create a titled window
