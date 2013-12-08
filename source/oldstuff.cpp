@@ -183,3 +183,14 @@ void loadHardTree(){
 	//lookat = root->left->left->pic;
 	lookat = root->left->pic;
 }
+
+/* This is the manifest file for the mobile project. Comments start with "/" (no quotes) 
+   and end with "*/" (also no qutos). There must be whitespace on both sides of comment thing.
+   Each line is a picture entry. Pipes "|" in description will be turned into newlines.
+   Filename, name, and description must be surrounded by quotes
+   Filename width height "name" "description"    ex:
+   C:\temp\project\pics\samp\bard.jpg 100 100
+   This is a bard playing a thing
+   
+   Currently there can be no spaces in the filename, name, or description.
+   */

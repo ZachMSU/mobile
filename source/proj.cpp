@@ -28,14 +28,12 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 #define editor_title "3D Mobile"
 #define DEFAULT_MANIFEST "C:\\temp\\project\\manifest.txt"
 
-#define DROP_DISTANCE -100  // For the mobile drop distance for each hanging/raised(if > 0) piece
 #define NODE_FOLDER_1 "../../../mobiletree/1"
 #define NODE_FOLDER_2 "../../../mobiletree/2"
-#define FONT GLUT_BITMAP_TIMES_ROMAN_24
-
 
 //animation speeds
-#define SPEED_RANGE 0.5 //pictures will rotate a max of SPEED_RANGE degrees per frame
+#define FLY_SPEED 120 //how many frames the fly to will take
+#define SPEED_RANGE 0.2 //pictures will rotate a max of SPEED_RANGE degrees per frame
 #define WOBBLE 2 // This is how much of a wobble when looking at a picture in degrees
 #define FRAMES_PER_CHAR 2 //how many frames between each character when displaying in the description
 
@@ -46,11 +44,20 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 #define TEXT_BACKGROUND 0, 0, 0, 0.6
 #define HIGHLIGHT_COLOR 1, 1, 0
 #define FONT_HEIGHT 50 //space between lines
+#define TEXT_POS_X -.9 //text starting position from -1 to 1. 0 is the middle of the screen
+#define TEXT_POS_Y -.2 
+#define FONT GLUT_BITMAP_TIMES_ROMAN_24
+#define DROP_DISTANCE -230  // For the mobile drop distance for each hanging/raised(if > 0) piece
+
+bool showHelp = false,
+	 showCoords = true,
+	 tracking = false,
+	 manifest = false,
+	 spinning = true;
 
 using namespace std;
 
 static GLbitfield bitmask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
-static bool spinning = true;
 static int FPS = 60;
 static int currentChars = 0;
 static int framesSinceLastChar = 0;
@@ -66,13 +73,16 @@ struct timeStat{
 	}
 };
 timeStat timestat;
-
-
 GLfloat random(){
 	GLfloat out = ((GLfloat) rand() / RAND_MAX) * (SPEED_RANGE * 2) - SPEED_RANGE;
 	cout<<"->Random:"<<out<<"\n";
 	return out;
 }
+bool coinFlip(){
+	//returns true or false
+	return (rand() % 2) == 0;
+}
+
 struct mouseClick{
 	bool clicked;
 	int x;
@@ -125,9 +135,9 @@ double distanceMultiplier = 5;
 camera cam(70.0, 1000, 600, 1, depth*distanceMultiplier*1000); //initalize the camera object
 cameraPos initialPos = {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0};
 
-bool showHelp = false,
-	 showCoords = true,
-	 tracking = false;
+int picCount = 0,
+	picLookat = -1;
+picture* pics[100];
 
 void reshape(int w, int h){
 	cam.changePerspective(70.0, w, h, 1, depth*distanceMultiplier*1000);
@@ -160,8 +170,8 @@ void displayDescriptionNew() {
 
 	//render the semi-transparent background
 	glBegin(GL_POLYGON);
-		glVertex3f(-1, 0, 0);	
-		glVertex3f(1, 0, 0);
+		glVertex3f(-1, TEXT_POS_Y, 0);	
+		glVertex3f(1, TEXT_POS_Y, 0);
 		glVertex3f(1, -1, 0);
 		glVertex3f(-1, -1, 0);
 	glEnd();
@@ -173,7 +183,7 @@ void displayDescriptionNew() {
 		framesSinceLastChar = 0;
 		currentChars ++;
 	}
-	renderBitmapString(-1, 0, 0, FONT, lookat->description, FONT_HEIGHT / cam.height, currentChars);
+	renderBitmapString(TEXT_POS_X, TEXT_POS_Y, 0, FONT, lookat->description, FONT_HEIGHT / cam.height, currentChars);
 
 	//reset blending
 	glEnable(GL_DEPTH_TEST);
@@ -227,8 +237,8 @@ void drawTree(treeNode* tree) {
 		//if (newClickDepth != oldClickDepth) {
 		//if (newClickDepth < click.lastZ){
 		if (newClickDepth == 1.0) {
-			if (pointingToAbyss == 10) click.lastPic = nullptr;
-			else if (pointingToAbyss < 10) pointingToAbyss++;
+			if (pointingToAbyss == picCount + 1) click.lastPic = nullptr;
+			else if (pointingToAbyss < picCount + 1) pointingToAbyss++;
 		} else if (newClickDepth < click.lastZ){
 			pointingToAbyss = 0;
 			click.lastPic = tree->pic;
@@ -314,8 +324,78 @@ void myDisplayCallback(){
 	//don't put stuff here, have everything redraw off the timer tick
 	// prevents window refreshes from making the thing spin out of control
 }
+void constructRandomTree(){
+	//construct the tree	
+	const int nodeWidth = 10;
+	root = new treeNode(0, 0, 0, nodeWidth);  // Main root
+	//nodeWidth /= 2;
+	//add the first pic
+	root->left = new treeNode(0, DROP_DISTANCE, 0, nodeWidth);
+	root->left->pic = pics[0];
+	root->radius += pics[0]->width;
+	//add the second pic
+	root->right = new treeNode(0, DROP_DISTANCE, 0, nodeWidth);
+	root->right->pic = pics[1];
+	root->radius += pics[1]->width;
+
+	//add the subsequent pics
+	for (int i = 2; i < picCount; i++){
+#ifdef DEBUG
+		cout<<"Adding pics["<<i<<"] "<<pics[i]->filename<<"\n";
+#endif
+		//int curNodeWidth = nodeWidth;
+		int treeHeight = 0;
+		bool leafNotFound = true;
+		
+		treeNode* leafNode = root;
+		
+		while (leafNotFound) {
+			treeHeight ++;
+			
+			leafNode->radius += pics[i]->width / 2;
+			if (leafNode->pic == NULL) {
+				
+				leafNode = (coinFlip()) ? leafNode->left : leafNode->right;
+				
+				//nodeWidth /= 2;
+			} else {
+				//Found a leaf. Replace leaf with node, and move the found pic to the left.
+				//picture* tempPic = leafNode->pic;
+				leafNode->left = new treeNode(0, DROP_DISTANCE * treeHeight, 0, nodeWidth);
+				leafNode->radius += leafNode->pic->width / 2;
+				leafNode->left->pic = leafNode->pic;
+				leafNode->pic = NULL;
+				
+				//Add current pics[i] to right side
+				leafNode->right = new treeNode(0, DROP_DISTANCE * treeHeight, 0, nodeWidth);
+				leafNode->right->pic = pics[i];
+				leafNotFound = false;
+			}
+		}
+	}
+	//return true;
+}
 void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 	switch (key) {
+	case '.':
+		cam.animate(FLY_SPEED);
+		if (picLookat < picCount - 1) {
+			picLookat ++;
+			lookat = pics[picLookat];		
+			click.clicked = true; //cause the animation to start
+		}
+		break;
+	case ',':
+		cam.animate(FLY_SPEED);
+		if (picLookat > 0) {
+			picLookat --;
+			lookat = pics[picLookat];
+			click.clicked = true; //cause the animation to start
+		}
+		break;
+	case 'r':
+		if (manifest) constructRandomTree();
+		break;
 	case 't':
 		cout << "Avg render time of last " << timestat.num << " frames is " << (timestat.sum / timestat.num) << " milliseconds.\n";
 		timestat.sum = 0;
@@ -371,19 +451,45 @@ void keyboardCallback(unsigned char key, int cursorX, int cursorY) {
 		exit(EXIT_SUCCESS);
 		cout<<"Bye!\n";
 		break;
-	default: break;
+	default: 
+		//movement keys
+		const int moveamt = 100;
+		switch (key) {		
+			case '1'://back
+				initialPos.z += moveamt;
+				break;
+			case '4'://forth
+				initialPos.z -= moveamt;
+				break;
+			case '2'://up
+				initialPos.y -= moveamt;
+				break;
+			case '5'://down
+				initialPos.y += moveamt;
+				break;
+			case '3'://lookat up
+				initialPos.lookatY -= moveamt;
+				break;
+			case '6'://lookat down
+				initialPos.lookatY += moveamt;
+				break;
+
+		}
+		cam.set(initialPos);
+		cout<<"Camera Z:"<<initialPos.z<<" Y:"<<initialPos.y<<" LookatY:"<<initialPos.lookatY<<"\n";
+		break;
 	}
 }
 void mouseCallback(int buttonName, int state, int cursorX, int cursorY) {
 #ifdef DEBUG
 	cout<<"->MouseClick X:"<<cursorX<<" Y:"<<cursorY<<"\n";
 #endif
-	cam.animate(120);
+	cam.animate(FLY_SPEED);
 	if (buttonName == GLUT_LEFT_BUTTON && state == GLUT_UP) {
 		if (tracking) {
 			resetCamera();
 			tracking = false;
-		} else {
+		} else if (click.lastPic != nullptr) {
 			click.clicked = true;
 			click.x = cursorX;
 			click.y = width - cursorY;
@@ -515,11 +621,65 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 void constructMobileTree() {
 	root = new treeNode(0, 0, 0, 2000);  // Main root
 
-	root->left = new treeNode(0, -100, 0, 800); // Left child
+	root->left = new treeNode(0, DROP_DISTANCE, 0, 800); // Left child
 	searchDirectory(NODE_FOLDER_1, root->left, DROP_DISTANCE); //Check left
 
-	root->right = new treeNode(0, -100, 0, 800); // Right child
+	root->right = new treeNode(0, DROP_DISTANCE, 0, 800); // Right child
 	searchDirectory(NODE_FOLDER_2, root->right, DROP_DISTANCE); // Check right
+}
+bool loadManifest(const char* manifestFilename){
+	/* Loads the configuration data from the manifest file. 
+	 * See example manifest.txt for more deets
+	 * manifestFilename : filename of the config file
+	 * NOTES: This whole thing could be better.
+	 */
+	
+	ifstream file;
+	file.open(manifestFilename);
+	if (file.fail()) {
+#ifdef DEBUG
+		cout<<"no manifest file found. Defaulting to folder mode.\n";
+#endif
+		return false;
+	}
+	string filename = "";
+	GLfloat width;
+	GLfloat height;
+	string name;
+	string description = "";
+	string token;
+	char ctoken[512];
+	file>>token;
+	while (!file.eof()) {		
+		//file.get();
+		//cout<<token;
+		if (token == "#") {
+			file>>width;
+			file>>height;
+			file.getline(ctoken, 512); //get filename
+			file.getline(ctoken, 512); //Has to be 2. Dunno why.
+			cout<<"w:"<<width<<"h:"<<height<<"\n";
+			filename="";
+			description="";
+			filename.append(ctoken);
+			while (!file.eof()) {
+				//parse the description
+				file>>token;
+				if (token[0] == '#') break;
+				description.append(token);
+				file.getline(ctoken, 512);
+				description.append(ctoken);
+				description.append("\n");
+			}
+#ifdef DEBUG
+			cout<<"pic["<<picCount<<"] filename:"<<filename<<"\n description:"<<description<<"\n";
+#endif
+			pics[picCount] = new picture(filename, "", description);
+			if (pics[picCount]->loaded) picCount++;		
+		}
+	}
+	file.close();
+	return true;
 }
 
 void main(int argc, char ** argv){
@@ -543,7 +703,17 @@ void main(int argc, char ** argv){
 
 	click.clicked = false;
 	//loadHardTree();
-	constructMobileTree();
+	//constructMobileTree();
+	if (loadManifest("C:\\temp\\project\\manifest.txt")){
+		constructRandomTree();
+		manifest = true;
+	} else {
+		constructMobileTree();
+	}
+
+	initialPos.z = root->radius * 2;
+	cam.setPos(initialPos);
+	//pause();
 
 	glutKeyboardFunc(keyboardCallback);
 	glutDisplayFunc(myDisplayCallback);		// register a callback

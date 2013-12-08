@@ -18,8 +18,10 @@ private:
 	float texWidth;
 	float texHeight;
 	GLuint texture;
-	bool loaded;
+	
 public:
+	bool loaded;
+	string filename;
 	string name;
 	string description;
 	bool hasDescription;

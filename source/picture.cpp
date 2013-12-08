@@ -13,7 +13,7 @@
 //	picture(filename, inWidth, inHeight, "untitled", DEFAULT_DESCRIPTION);
 //}
 
-picture::picture(string filename, string inName, string inDescription){
+picture::picture(string inFilename, string inName, string inDescription){
 	if (strcmp(inDescription.c_str(), "") == 0){
 		hasDescription = false;
 	} else {
@@ -21,10 +21,11 @@ picture::picture(string filename, string inName, string inDescription){
 	}
 	errno = 0;
 #ifdef DEBUG	
-	cout << "->Constructing texture object for " << filename << ": Loading...";
+	cout << "->Constructing texture object for " << inFilename << ": Loading...";
 #endif
 	name = string(inName);
 	description = string(inDescription);
+	filename = string(inFilename);
 	
 	loaded = false;
 	//width = inWidth;
