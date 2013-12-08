@@ -56,6 +56,7 @@ static int currentChars = 0;
 static int framesSinceLastChar = 0;
 static GLfloat currentAngleOfRotation[4] = { 0, 30, 90, 180 };
 picture* lookat;
+int pointingToAbyss = 0;
 struct timeStat{
 	WORD num;
 	WORD sum;
@@ -135,9 +136,11 @@ void resetCamera() {
 	cam.set(initialPos, true);
 }
 void track(){
-	cam.set(lookat->x - (1200 * sin(toRadian(lookat->angle + 180 + WOBBLE))),
+	double largestDimention = (lookat->height > lookat->width) ? lookat->height : lookat->width;
+	double distance = largestDimention * 1.5;
+	cam.set(lookat->x - (distance * sin(toRadian(lookat->angle + 180 + WOBBLE))),
 			lookat->y - lookat->height,
-			lookat->z - (1200 * cos(toRadian(lookat->angle + 180 - WOBBLE))),
+			lookat->z - (distance * cos(toRadian(lookat->angle + 180 - WOBBLE))),
 			lookat->x, lookat->y - lookat->height, lookat->z, false);
 }
 void displayDescriptionNew() {
@@ -222,7 +225,12 @@ void drawTree(treeNode* tree) {
 
 		glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &newClickDepth);
 		//if (newClickDepth != oldClickDepth) {
-		if (newClickDepth < click.lastZ){
+		//if (newClickDepth < click.lastZ){
+		if (newClickDepth == 1.0) {
+			if (pointingToAbyss == 10) click.lastPic = nullptr;
+			else if (pointingToAbyss < 10) pointingToAbyss++;
+		} else if (newClickDepth < click.lastZ){
+			pointingToAbyss = 0;
 			click.lastPic = tree->pic;
 		}
 		click.lastZ = newClickDepth;
@@ -276,6 +284,7 @@ void drawTree(treeNode* tree) {
 }
 void redraw(){
 	glClear(bitmask);
+	//click.lastPic = nullptr;
 
 	if (tracking) track();
 	
@@ -293,7 +302,7 @@ void redraw(){
 		framesSinceLastChar = 0;
 	}
 
-	if (tracking && cam.framesLeft <= 0) {
+	if (tracking && cam.framesLeft <= 0 && lookat->hasDescription) {
 		//displayDescription();
 		displayDescriptionNew();
 	}
@@ -430,7 +439,7 @@ char* parseTextFile(const char *path) {
 		cout << " ( ! ) Missing file: " << path << " ( ! )\n\n";
 	}
 	
-	return "???";
+	return "";
 }
 void printDirectory(const char *path) {
 	tinydir_dir dir;
@@ -484,7 +493,7 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 				sprintf(textPath, "%s/%s%s", path, fileName, ".txt");
 				printf("->Preparing files:\n  %s\n  %s\n\n", file.path, textPath);
 				description = (char*)parseTextFile(textPath);
-				if (strcmp(description, "???") == 0) description = fileName;
+				//if (strcmp(description, "???") == 0) description = fileName;
 				if (hasLeftNode) {
 					if (leaf->right == NULL) leaf->right = new treeNode(0, depth, 0, 800);
 					leaf->right->pic = new picture(file.path, file.name, description);
@@ -495,8 +504,10 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 					hasLeftNode = true;
 				}
 			}
+			
 			printf("\n");
 		}
+		
 		tinydir_next(&dir);
 	}
 	tinydir_close(&dir);
@@ -510,6 +521,7 @@ void constructMobileTree() {
 	root->right = new treeNode(0, -100, 0, 800); // Right child
 	searchDirectory(NODE_FOLDER_2, root->right, DROP_DISTANCE); // Check right
 }
+
 void main(int argc, char ** argv){
 	//initialize glut and openGL
 	glutInit(& argc, argv);

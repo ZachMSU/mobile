@@ -4,7 +4,7 @@
 #define DEFAULT_WIDTH 600
 #define DEFAULT_HEIGHT 600
 #define DEFAULT_NAME "untitled"
-#define DEFAULT_DESCRIPTION "no description"
+#define DEFAULT_DESCRIPTION ""
 #include "helpers.h"
 class picture{
 	/* This class provides storage and operations for each image.
@@ -22,6 +22,7 @@ private:
 public:
 	string name;
 	string description;
+	bool hasDescription;
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;

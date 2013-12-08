@@ -14,6 +14,11 @@
 //}
 
 picture::picture(string filename, string inName, string inDescription){
+	if (strcmp(inDescription.c_str(), "") == 0){
+		hasDescription = false;
+	} else {
+		hasDescription = true;
+	}
 	errno = 0;
 #ifdef DEBUG	
 	cout << "->Constructing texture object for " << filename << ": Loading...";
