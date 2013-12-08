@@ -28,7 +28,7 @@ double toDegree(double);
 double toRadian(double);
 //converts degrees to radians
 
-void renderBitmapString(double, double, void*, string);
+void renderBitmapString(double, double, double, void*, string, double drop = 15);
 //displays the string on the screen (xcoord, ycoord, font, diplaystring)
 
 void coordinates(GLfloat);

@@ -13,7 +13,7 @@
 //	picture(filename, inWidth, inHeight, "untitled", DEFAULT_DESCRIPTION);
 //}
 
-picture::picture(string filename, GLfloat inWidth, GLfloat inHeight, string inName, string inDescription){
+picture::picture(string filename, string inName, string inDescription){
 	errno = 0;
 #ifdef DEBUG	
 	cout << "->Constructing texture object for " << filename << ": Loading...";
@@ -22,8 +22,8 @@ picture::picture(string filename, GLfloat inWidth, GLfloat inHeight, string inNa
 	description = string(inDescription);
 	
 	loaded = false;
-	width = inWidth;
-	height = inHeight;
+	//width = inWidth;
+	//height = inHeight;
 	x = 0;
 	y = 0;
 	z = 0;
@@ -39,9 +39,22 @@ picture::picture(string filename, GLfloat inWidth, GLfloat inHeight, string inNa
 #ifdef DEBUG
 		cout << "Done! Storing[" << texture << "]...";
 #endif
+		unsigned char* img;
+		int w, h, channels;
+
+		img = SOIL_load_image(filename.c_str(), &w, &h, &channels, SOIL_LOAD_AUTO);
+		SOIL_free_image_data(img);
+
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		width = w;
+		height = h;
 #ifdef DEBUG
+		cout << "Success!\n";
+		cout << "Picture Information: \n";
+		cout << " - name: " << name << "\n";
+		cout << " - width: " << width << ", height: " << height << "\n";
+		cout << " - description: " << description << "\n\n";
 		cout << "Success!\n";
 #endif
 		loaded = true;

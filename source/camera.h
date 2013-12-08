@@ -37,7 +37,12 @@ public:
 	void setLookat(GLfloat lookatX, GLfloat lookatY, GLfloat lookatZ);
 	void setLookat(cameraPos position);
 	void touch();
-
+	void camera::setPerspective(){
+		gluPerspective(fovy, width/height, zNear, zFar);
+				gluLookAt(currentPos.x, currentPos.y, currentPos.z,
+			  currentPos.lookatX, currentPos.lookatY, currentPos.lookatZ,
+			  upx, upy, upz);
+	}
 	//possibly add FPS controls
 };
 

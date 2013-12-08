@@ -26,15 +26,16 @@ double toRadian(double in){
 double toDegree(double in){
 	return in * 180 / M_PI;
 }
-void renderBitmapString(double x, double y, void *font, string str) {
+void renderBitmapString(double x, double y, double z, void *font, string str, double drop) {
+	
 	int newlines = 1;
-	glRasterPos2d(x,y);
+	glRasterPos3d(x,y - (newlines * drop),z);
 	for (string::iterator c = (&str)->begin(); c != (&str)->end(); ++c) {
 		char chr = *c;
-		if (chr == '_') chr = ' ';
+		if (chr == '_') chr == ' ';
 		if (chr == '\n' || chr == '|') { 
-			glRasterPos2d(x,y + (newlines * 15));
 			newlines ++;
+			glRasterPos3d(x,y - (newlines * drop),z);	
 		}else{
 			glutBitmapCharacter(font, chr);
 		}

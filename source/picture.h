@@ -13,14 +13,15 @@ class picture{
 	 * and rotated at the specifyed angle(about it's own center)
 	 */
 private:
-	string name;
-	string description;
+
 	GLuint loadTexture(string);
 	float texWidth;
 	float texHeight;
 	GLuint texture;
 	bool loaded;
 public:
+	string name;
+	string description;
 	GLfloat x;
 	GLfloat y;
 	GLfloat z;
@@ -32,7 +33,10 @@ public:
 	//picture(string filename);
 	//picture(string filename, GLfloat width, GLfloat height);
 	//picture(string filename, string name, string description); //filename, name, description
-	picture(string filename, GLfloat width, GLfloat height, string name = DEFAULT_NAME, string description = DEFAULT_DESCRIPTION);
+	picture(string filename, GLfloat width, GLfloat height, string name = DEFAULT_NAME, string description = DEFAULT_DESCRIPTION){
+		picture(filename, name, description);
+	}
+	picture(string filename, string name = DEFAULT_NAME, string description = DEFAULT_DESCRIPTION);
 	void display(GLfloat lx, GLfloat ly, GLfloat lz, GLfloat langle, bool lhighlighted = false){
 		x = lx;
 		y = ly;

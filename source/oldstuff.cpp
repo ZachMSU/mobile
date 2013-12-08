@@ -116,3 +116,70 @@ void highlightPicture(float x, float y, float z, float angle, float verse, float
 	glPopMatrix();
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
+
+void loadManifest(const char* manifestFilename){
+	/* Loads the configuration data from the manifest file. 
+	 * See example manifest.txt for more deets
+	 * manifestFilename : filename of the config file
+	 * NOTES: This whole thing could be better.
+	 */
+
+	//known bug: will crash if comment is at the end
+	ifstream file;
+	file.open(manifestFilename);
+	string filename;
+	GLfloat width;
+	GLfloat height;
+	string name;
+	string description;
+	string token;
+	while (!file.eof()) {
+		file>>token;
+		if (token == "/*") {
+			//itereate over comments
+			while (true){
+				file>>token;
+				if (token == "*/") break;
+			}
+			file>>token;
+		}
+		filename = token;
+		file>>width>>height>>name>>description;
+#ifdef DEBUG
+		cout<<"->IDX:"<<picCount<<"FN:"<<filename<<" W:"<<width<<" H:"<<height<<" NAME:"<<name<<" DESCRIPTION:"<<description<<"\n"; //debug
+#endif
+		pics[picCount] = new picture(filename, width, height, name, description);
+		picCount ++;
+	}
+}
+
+void loadHardTree(){
+	//this is just a hardcoded tree. For debug purposes
+	//Trees are hard.
+	root->left = new treeNode(0, -100, 0, 1200);
+	root->right = new treeNode(0, -100, 0, 800);
+
+	root->left->pic = new picture("C:\\temp\\project\\pics\\1.jpg", 600, 500, "bard", "thing");
+	root->right->pic = new picture("C:\\temp\\project\\pics\\5.jpg", 600, 500, "bard", "thing");
+
+	//root->left->left = new treeNode(0, -500, 0, 600);
+	//root->left->right = new treeNode(0, -200, 0, 800);
+
+	//root->right->left = new treeNode(0, -200, 0, 800);
+	//root->right->right = new treeNode(0, -200, 0, 800);
+
+	//root->left->left->left = new treeNode(0, -900, 0, 600);
+	//root->left->left->right = new treeNode(0, -900, 0, 600);
+
+	//root->left->left->left->pic = new picture("C:\\temp\\project\\pics\\1.jpg", 600, 500, "bard", "thing");
+	//root->left->left->right->pic = new picture("C:\\temp\\project\\pics\\5.jpg", 600, 500, "bard", "thing");
+	
+	//root->left->right->pic = new picture("C:\\temp\\project\\pics\\6.jpg", 800, 1300, "batoro", "kids");
+
+
+	//root->right->left->pic = new picture("C:\\temp\\project\\pics\\3.jpg", 800, 600, "bard", "thing is beans");
+	//root->right->right->pic = new picture("C:\\temp\\project\\pics\\4.jpg", 800, 600, "sette", "haters");
+
+	//lookat = root->left->left->pic;
+	lookat = root->left->pic;
+}
