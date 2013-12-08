@@ -19,6 +19,7 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 ===================================================================================*/
 
 #include <sstream>
+
 #include "helpers.h"
 #include "picture.h"
 #include "camera.h"
@@ -26,18 +27,33 @@ INSTRUCTION FOR COMPILATION AND EXECUTION:
 
 #define editor_title "3D Mobile"
 #define DEFAULT_MANIFEST "C:\\temp\\project\\manifest.txt"
-#define SPEED_RANGE 0.5
-#define WOBBLE 2
+
 #define DROP_DISTANCE -100  // For the mobile drop distance for each hanging/raised(if > 0) piece
 #define NODE_FOLDER_1 "../../../mobiletree/1"
 #define NODE_FOLDER_2 "../../../mobiletree/2"
 #define FONT GLUT_BITMAP_TIMES_ROMAN_24
+
+
+//animation speeds
+#define SPEED_RANGE 0.5 //pictures will rotate a max of SPEED_RANGE degrees per frame
+#define WOBBLE 2 // This is how much of a wobble when looking at a picture in degrees
+#define FRAMES_PER_CHAR 2 //how many frames between each character when displaying in the description
+
+//style properties
+#define STICK_COLOR 0, 1, 1
+#define STICK_WIDTH 3
+#define TEXT_COLOR 0, 1, 0
+#define TEXT_BACKGROUND 0, 0, 0, 0.6
+#define HIGHLIGHT_COLOR 1, 1, 0
 #define FONT_HEIGHT 50 //space between lines
+
 using namespace std;
 
 static GLbitfield bitmask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT;
 static bool spinning = true;
 static int FPS = 60;
+static int currentChars = 0;
+static int framesSinceLastChar = 0;
 static GLfloat currentAngleOfRotation[4] = { 0, 30, 90, 180 };
 picture* lookat;
 struct timeStat{
@@ -108,7 +124,7 @@ double distanceMultiplier = 5;
 camera cam(70.0, 1000, 600, 1, depth*distanceMultiplier*1000); //initalize the camera object
 cameraPos initialPos = {0, -500, depth*distanceMultiplier*1.5, 0, -1500, 0};
 
-bool hideHelp = true,
+bool showHelp = false,
 	 showCoords = true,
 	 tracking = false;
 
@@ -137,7 +153,7 @@ void displayDescriptionNew() {
 	glEnable(GL_BLEND);
 	glDisable(GL_DEPTH_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glColor4f(0, 0, 0, 0.6);
+	glColor4f(TEXT_BACKGROUND);
 
 	//render the semi-transparent background
 	glBegin(GL_POLYGON);
@@ -148,8 +164,13 @@ void displayDescriptionNew() {
 	glEnd();
 
 	//render the text
-	glColor3f(1, 1, 1);
-	renderBitmapString(-1, 0, 0, FONT, lookat->description, FONT_HEIGHT / cam.height);
+	glColor3f(TEXT_COLOR);
+	framesSinceLastChar ++;
+	if (framesSinceLastChar >= FRAMES_PER_CHAR) {
+		framesSinceLastChar = 0;
+		currentChars ++;
+	}
+	renderBitmapString(-1, 0, 0, FONT, lookat->description, FONT_HEIGHT / cam.height, currentChars);
 
 	//reset blending
 	glEnable(GL_DEPTH_TEST);
@@ -194,7 +215,7 @@ void drawTree(treeNode* tree) {
 		//glReadPixels(click.x, click.y, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &oldClickDepth);
 
 		//Render the picture
-		tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle, tree->pic == click.lastPic);
+		if (tree->pic != NULL) tree->pic->display(tree->xpos, tree->ypos, tree->zpos, tree->angle, tree->pic == click.lastPic);
 	
 		//Find the new z buffer value at the mouse coord, if it has changed, then this picture is the one the mouse is over
 		GLfloat newClickDepth;
@@ -210,19 +231,24 @@ void drawTree(treeNode* tree) {
 		GLfloat z1 = tree->zpos + (sin(toRadian(tree->angle)) * tree->radius);
 		GLfloat x2 = tree->xpos + (cos(toRadian(tree->angle + 180)) * tree->radius);
 		GLfloat z2 = tree->zpos + (sin(toRadian(tree->angle + 180)) * tree->radius);
-		glColor3f(0, 1, 1);
+		glColor3f(STICK_COLOR);
 		
 		//draw the sticks
-		glLineWidth(3);
+		glLineWidth(STICK_WIDTH);
 		glBegin(GL_LINES);		
-		glVertex3f(x1, tree->left->ypos, z1);
-		glVertex3f(x1, tree->ypos, z1);
+			if (tree->left != NULL) {
+				glVertex3f(x1, tree->left->ypos, z1);
+				glVertex3f(x1, tree->ypos, z1);
+			}
 
-		glVertex3f(x1, tree->ypos, z1);
-		glVertex3f(x2, tree->ypos, z2);
+			glVertex3f(x1, tree->ypos, z1);
+			glVertex3f(x2, tree->ypos, z2);
 
-		glVertex3f(x2, tree->ypos, z2);
-		glVertex3f(x2, tree->right->ypos, z2);
+		
+			if (tree->right != NULL) {
+				glVertex3f(x2, tree->ypos, z2);
+				glVertex3f(x2, tree->right->ypos, z2);
+			}
 		glEnd();
 
 		//process left subtree
@@ -263,9 +289,11 @@ void redraw(){
 	if (click.clicked) {
 		tracking = true;
 		click.clicked = false;
+		currentChars = 1;
+		framesSinceLastChar = 0;
 	}
 
-	if (tracking) {
+	if (tracking && cam.framesLeft <= 0) {
 		//displayDescription();
 		displayDescriptionNew();
 	}
@@ -429,9 +457,10 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 
 	bool hasLeftNode = false;
 	bool hasLeftPic = false;
+	bool nodeNotFull = true;
 	depth += DROP_DISTANCE;
 
-	while (dir.has_next) {
+	while (dir.has_next && nodeNotFull) {
 		tinydir_file file;
 		tinydir_readfile(&dir, &file);
 		if (file.is_dir) {
@@ -439,6 +468,7 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 				if (hasLeftNode)  {//go Right
 					leaf->right = new treeNode(0, depth, 0, 800);
 					searchDirectory(file.path, leaf->right, depth); // Check right
+					nodeNotFull = false;
 				} else { //go Left
 					leaf->left = new treeNode(0, depth, 0, 800);
 					searchDirectory(file.path, leaf->left, depth); // Check left
@@ -454,11 +484,15 @@ void searchDirectory(const char *path, treeNode *leaf, float depth) {
 				sprintf(textPath, "%s/%s%s", path, fileName, ".txt");
 				printf("->Preparing files:\n  %s\n  %s\n\n", file.path, textPath);
 				description = (char*)parseTextFile(textPath);
-				if (hasLeftPic) {
+				if (strcmp(description, "???") == 0) description = fileName;
+				if (hasLeftNode) {
+					if (leaf->right == NULL) leaf->right = new treeNode(0, depth, 0, 800);
 					leaf->right->pic = new picture(file.path, file.name, description);
+					nodeNotFull = false;
 				} else {
+					if (leaf->left == NULL) leaf->left = new treeNode(0, depth, 0, 800);
 					leaf->left->pic = new picture(file.path, file.name, description);
-					hasLeftPic = true;
+					hasLeftNode = true;
 				}
 			}
 			printf("\n");

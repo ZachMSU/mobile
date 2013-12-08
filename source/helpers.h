@@ -5,7 +5,7 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
-#define DEBUG
+#define DEBUG //remove to disable messages
 
 #define _USE_MATH_DEFINES
 using namespace std;
@@ -28,7 +28,7 @@ double toDegree(double);
 double toRadian(double);
 //converts degrees to radians
 
-void renderBitmapString(double, double, double, void*, string, double drop = 15);
+void renderBitmapString(double, double, double, void*, string, double drop = 15, int max = 0);
 //displays the string on the screen (xcoord, ycoord, font, diplaystring)
 
 void coordinates(GLfloat);
